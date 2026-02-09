@@ -6,10 +6,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/oklog/ulid/v2"
 
+	"sys-design/internal/api"
 	"sys-design/internal/config"
 	"sys-design/internal/db"
+	"sys-design/internal/mq"
+	"sys-design/internal/obs"
+	"sys-design/internal/storage"
 )
 
 func main() {
@@ -25,27 +28,23 @@ func main() {
 	}
 	defer pool.Close()
 
+	store, err := storage.NewMinioStore(cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	publisher, err := mq.NewPublisher(cfg)
+	if err != nil {
+		panic(err)
+	}
+	defer publisher.Close()
+
+	obs.RegisterAll()
+
 	r := gin.Default()
-
-	r.GET("/healthz", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
-
-	r.POST("/upload-url", func(c *gin.Context) {
-		// For now: stub response, just create media row.
-		mediaID := ulid.Make().String()
-		_, err := pool.Exec(ctx, "INSERT INTO media (id, status) VALUES ($1, 'INIT')", mediaID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"media_id":    mediaID,
-			"upload_url":  "",
-			"original_key": "",
-			"expires_in":  300,
-		})
-	})
+	r.Use(api.MetricsMiddleware())
+	srv := &api.Server{DB: pool, Store: store, Publisher: publisher}
+	srv.RegisterRoutes(r)
 
 	s := &http.Server{
 		Addr:           ":" + cfg.APIPort,

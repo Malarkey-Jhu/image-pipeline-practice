@@ -22,6 +22,7 @@ type Config struct {
 	RabbitQueue    string
 
 	MinioEndpoint  string
+	MinioPublicURL string
 	MinioAccessKey string
 	MinioSecretKey string
 	MinioBucket    string
@@ -30,6 +31,7 @@ type Config struct {
 
 	TaskLeaseSeconds int
 	TaskMaxRetries   int
+	WorkerMetricsPort string
 }
 
 func Load() (*Config, error) {
@@ -50,6 +52,7 @@ func Load() (*Config, error) {
 	cfg.RabbitQueue = getEnv("RABBITMQ_QUEUE", "processing_tasks")
 
 	cfg.MinioEndpoint = getEnv("MINIO_ENDPOINT", "http://minio:9000")
+	cfg.MinioPublicURL = getEnv("MINIO_PUBLIC_ENDPOINT", "")
 	cfg.MinioAccessKey = getEnv("MINIO_ACCESS_KEY", "minioadmin")
 	cfg.MinioSecretKey = getEnv("MINIO_SECRET_KEY", "minioadmin")
 	cfg.MinioBucket = getEnv("MINIO_BUCKET", "media")
@@ -58,6 +61,7 @@ func Load() (*Config, error) {
 
 	cfg.TaskLeaseSeconds = getEnvInt("TASK_LEASE_SECONDS", 60)
 	cfg.TaskMaxRetries = getEnvInt("TASK_MAX_RETRIES", 4)
+	cfg.WorkerMetricsPort = getEnv("WORKER_METRICS_PORT", "9091")
 
 	return cfg, nil
 }
